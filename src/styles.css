@@ -15,6 +15,7 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  overflow-x: hidden;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.68), rgba(255, 255, 255, 0) 360px),
     #f4f2ec;
@@ -59,7 +60,7 @@ h2 {
 }
 
 h1 {
-  font-size: clamp(28px, 4vw, 44px);
+  font-size: 44px;
   line-height: 1.05;
 }
 
@@ -449,38 +450,252 @@ select:focus {
 
 @media (max-width: 640px) {
   .app-shell {
-    width: min(100% - 20px, 1440px);
-    padding-top: 18px;
+    width: min(100% - 16px, 1440px);
+    padding: 14px 0 28px;
   }
 
   .toolbar {
     align-items: flex-start;
     flex-direction: column;
+    gap: 12px;
+    margin-bottom: 12px;
   }
 
-  .toolbar-actions,
-  .lookup-grid,
-  .lookup-result-grid {
-    grid-template-columns: 1fr;
-    width: 100%;
+  .eyebrow {
+    margin-bottom: 4px;
+    font-size: 12px;
   }
 
-  .summary-grid,
-  .project-grid {
-    grid-template-columns: 1fr;
+  h1 {
+    font-size: 28px;
+    line-height: 1.12;
+  }
+
+  h2 {
+    font-size: 16px;
   }
 
   .toolbar-actions {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .primary-button,
+  .secondary-button,
+  input,
+  select {
+    min-height: 44px;
+  }
+
+  input,
+  select {
+    font-size: 16px;
+  }
+
+  .mode-tabs {
+    gap: 6px;
+    padding: 5px;
+    margin-bottom: 12px;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .mode-tabs button {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 42px;
+    padding: 0 12px;
+    font-size: 13px;
+    scroll-snap-align: start;
   }
 
   .summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
   }
 
   .metric,
   .panel {
-    padding: 14px;
+    padding: 12px;
+  }
+
+  .metric strong {
+    margin-top: 6px;
+    font-size: 19px;
+  }
+
+  .section-heading {
+    margin-bottom: 12px;
+  }
+
+  .player-row {
+    padding: 12px;
+  }
+
+  .row-head {
+    align-items: end;
+  }
+
+  .icon-button {
+    width: 44px;
+    height: 44px;
+    flex: 0 0 auto;
+  }
+
+  .carry-input {
+    max-width: none;
+  }
+
+  .week-block {
+    padding: 10px;
+  }
+
+  .week-title {
+    align-items: flex-start;
+    margin-bottom: 8px;
+  }
+
+  .project-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .project-field {
+    padding: 8px;
+  }
+
+  .project-field span {
+    min-height: auto;
+    font-size: 12px;
+  }
+
+  .project-field input {
+    min-height: 42px;
+  }
+
+  .result-table-wrap {
+    overflow: visible;
+  }
+
+  .result-table {
+    min-width: 0;
+    border-collapse: separate;
+    border-spacing: 0 10px;
+  }
+
+  .result-table thead {
+    display: none;
+  }
+
+  .result-table tbody,
+  .result-table tr,
+  .result-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .result-table tr {
+    padding: 12px;
+    background: #faf9f5;
+    border: 1px solid #e3ded2;
+    border-radius: 8px;
+  }
+
+  .result-table td {
+    padding: 0;
+    border-bottom: 0;
+  }
+
+  .result-table td + td {
+    margin-top: 10px;
+  }
+
+  .result-table td::before {
+    display: block;
+    margin-bottom: 4px;
+    color: #68756e;
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .result-table td:nth-child(1)::before {
+    content: "名次";
+  }
+
+  .result-table td:nth-child(2)::before {
+    content: "成员";
+  }
+
+  .result-table td:nth-child(3)::before {
+    content: "计算";
+  }
+
+  .result-table td:nth-child(4)::before {
+    content: "项目明细";
+  }
+
+  .result-table td:nth-child(5)::before {
+    content: "总分";
+  }
+
+  .rank-pill {
+    width: 34px;
+    height: 34px;
+  }
+
+  .score-cell {
+    font-size: 24px;
+  }
+
+  .mini-score-grid {
+    max-width: none;
+    gap: 6px;
+  }
+
+  .mini-score-grid span {
+    flex: 1 1 calc(50% - 6px);
+    justify-content: center;
+    min-height: 30px;
+    padding: 0 6px;
+    text-align: center;
+  }
+
+  .lookup-grid {
+    grid-template-columns: 1fr;
+    max-width: none;
+  }
+
+  .lookup-score {
+    min-height: 58px;
+  }
+
+  .lookup-result-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .lookup-card {
+    padding: 10px;
+  }
+
+  .lookup-card strong {
+    font-size: 19px;
+  }
+}
+
+@media (max-width: 340px) {
+  .summary-grid,
+  .project-grid,
+  .lookup-result-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mode-tabs button {
+    flex-basis: auto;
+    min-width: 120px;
+  }
+
+  .mini-score-grid span {
+    flex-basis: 100%;
   }
 }
