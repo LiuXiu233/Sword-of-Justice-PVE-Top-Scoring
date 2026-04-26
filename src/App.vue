@@ -352,6 +352,22 @@ watch(
             </tbody>
           </table>
         </div>
+
+        <div class="mobile-quick-results" aria-label="手机端快速结果">
+          <div class="quick-result-head">
+            <strong>快速结果</strong>
+            <span>名次 / 成员 / 流派 / 总分</span>
+          </div>
+
+          <ol class="quick-result-list">
+            <li v-for="(player, index) in rankedPlayers" :key="player.id">
+              <span class="quick-rank">{{ index + 1 }}</span>
+              <span class="quick-member">{{ player.name || `玩家${index + 1}` }}</span>
+              <span class="quick-school">{{ player.school }}</span>
+              <strong>{{ formatNumber(player.result) }}</strong>
+            </li>
+          </ol>
+        </div>
       </div>
     </section>
 
