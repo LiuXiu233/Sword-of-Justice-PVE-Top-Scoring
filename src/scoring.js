@@ -1,8 +1,8 @@
 export const categories = [
   { id: 'realmSix', name: '燃心画境·六人', shortName: '画境六人' },
   { id: 'six', name: '六人本', shortName: '六人本' },
-  { id: 'raid123', name: '团本·123', shortName: '团本123' },
-  { id: 'raid456', name: '团本·456', shortName: '团本456' },
+  { id: 'raid123', name: '团本·外', shortName: '团本外' },
+  { id: 'raid456', name: '团本·内', shortName: '团本内' },
   { id: 'realmRaid', name: '燃心画境·团本', shortName: '画境团本' },
 ]
 

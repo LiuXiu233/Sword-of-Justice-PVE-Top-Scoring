@@ -8,6 +8,7 @@ const modes = [
   { id: 'single', name: '周成绩换积分', resultLabel: '周积分' },
 ]
 
+const schools = ['碎梦', '神相', '鸿音', '九灵', '龙吟', '沧澜', '铁衣', '素问', '玄机', '血河', '潮光']
 const storageKey = 'nishuihan-chief-score-tool'
 const activeMode = ref('carry')
 const lookupRank = ref(1)
@@ -26,6 +27,7 @@ function makePlayer(index = 1) {
   return {
     id: crypto.randomUUID(),
     name: `玩家${index}`,
+    school: schools[0],
     lastPoints: 0,
     weekRanks: makeWeekRanks(),
     week1Ranks: makeWeekRanks(),
@@ -42,6 +44,7 @@ function loadPlayers() {
         return {
           ...makePlayer(index + 1),
           ...player,
+          school: schools.includes(player.school) ? player.school : schools[0],
           weekRanks: normalizeWeekRanks(player.weekRanks, fallbackRank),
           week1Ranks: normalizeWeekRanks(player.week1Ranks, player.week1Rank ?? fallbackRank),
           week2Ranks: normalizeWeekRanks(player.week2Ranks, player.week2Rank ?? fallbackRank),
@@ -94,26 +97,38 @@ function playerResult(player) {
   return weekTotal(player.weekRanks)
 }
 
-function playerBreakdown(player) {
+function playerWeekScores(player) {
   if (activeMode.value === 'carry') {
-    return `${formatNumber(player.lastPoints)} + ${formatNumber(weekTotal(player.weekRanks))}`
+    return {
+      week1: Number(player.lastPoints || 0),
+      week2: weekTotal(player.weekRanks),
+    }
   }
 
   if (activeMode.value === 'twoWeeks') {
-    return `${formatNumber(weekTotal(player.week1Ranks))} + ${formatNumber(weekTotal(player.week2Ranks))}`
+    return {
+      week1: weekTotal(player.week1Ranks),
+      week2: weekTotal(player.week2Ranks),
+    }
   }
 
-  return `${categories.length} 项合计`
+  return {
+    week1: weekTotal(player.weekRanks),
+    week2: 0,
+  }
 }
 
 const rankedPlayers = computed(() =>
   players
-    .map((player) => ({
-      ...player,
-      result: playerResult(player),
-      breakdown: playerBreakdown(player),
-      resultScores: resultProjectScores(player),
-    }))
+    .map((player) => {
+      const weekScores = playerWeekScores(player)
+      return {
+        ...player,
+        ...weekScores,
+        result: playerResult(player),
+        resultScores: resultProjectScores(player),
+      }
+    })
     .sort((a, b) => b.result - a.result || a.name.localeCompare(b.name, 'zh-CN')),
 )
 
@@ -224,6 +239,12 @@ watch(
                 成员
                 <input v-model.trim="player.name" type="text" :placeholder="`玩家${index + 1}`" />
               </label>
+              <label class="school-field">
+                流派
+                <select v-model="player.school">
+                  <option v-for="school in schools" :key="school" :value="school">{{ school }}</option>
+                </select>
+              </label>
               <button class="icon-button" type="button" title="移除成员" @click="removePlayer(player.id)">×</button>
             </div>
 
@@ -296,7 +317,9 @@ watch(
               <tr>
                 <th>名次</th>
                 <th>成员</th>
-                <th>计算</th>
+                <th>流派</th>
+                <th>第一周积分</th>
+                <th>第二周积分</th>
                 <th>项目明细</th>
                 <th>{{ activeModeMeta.resultLabel }}</th>
               </tr>
@@ -307,15 +330,24 @@ watch(
                   <span class="rank-pill">{{ index + 1 }}</span>
                 </td>
                 <td>{{ player.name || `玩家${index + 1}` }}</td>
-                <td>{{ player.breakdown }}</td>
+                <td>
+                  <span class="school-pill">{{ player.school }}</span>
+                </td>
+                <td class="week-score-cell">{{ formatNumber(player.week1) }}</td>
+                <td class="week-score-cell">{{ formatNumber(player.week2) }}</td>
                 <td>
                   <div class="mini-score-grid">
                     <span v-for="score in player.resultScores" :key="score.id">
-                      {{ score.shortName }} {{ formatNumber(score.points) }}
+                      <span class="score-full-name">{{ score.name }}</span>
+                      <span class="score-short-name">{{ score.shortName }}</span>
+                      {{ formatNumber(score.points) }}
                     </span>
                   </div>
                 </td>
-                <td class="score-cell">{{ formatNumber(player.result) }}</td>
+                <td class="score-cell">
+                  <span>{{ activeModeMeta.resultLabel }}</span>
+                  <strong>{{ formatNumber(player.result) }}</strong>
+                </td>
               </tr>
             </tbody>
           </table>

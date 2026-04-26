@@ -170,7 +170,7 @@ label,
 }
 
 .workspace-grid {
-  grid-template-columns: minmax(520px, 1.08fr) minmax(440px, 0.92fr);
+  grid-template-columns: minmax(500px, 0.9fr) minmax(640px, 1.1fr);
   align-items: start;
 }
 
@@ -209,6 +209,10 @@ label {
 
 .row-head label {
   flex: 1;
+}
+
+.row-head .school-field {
+  flex: 0 0 118px;
 }
 
 input,
@@ -316,12 +320,12 @@ select:focus {
 .result-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 760px;
+  min-width: 0;
 }
 
 .result-table th,
 .result-table td {
-  padding: 12px 10px;
+  padding: 12px 8px;
   text-align: left;
   border-bottom: 1px solid #ece7dc;
 }
@@ -343,21 +347,56 @@ select:focus {
   font-weight: 900;
 }
 
-.score-cell {
+.school-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 46px;
+  min-height: 28px;
+  padding: 0 10px;
   color: #145f43;
-  font-size: 22px;
+  background: #eef7f1;
+  border: 1px solid #cfe5d5;
+  border-radius: 6px;
+  font-size: 13px;
   font-weight: 900;
   white-space: nowrap;
+}
+
+.week-score-cell {
+  color: #145f43;
+  font-size: 17px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.score-cell {
+  white-space: nowrap;
+}
+
+.score-cell span {
+  display: block;
+  margin-bottom: 4px;
+  color: #68756e;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.score-cell strong {
+  display: block;
+  color: #145f43;
+  font-size: 28px;
+  line-height: 1;
 }
 
 .mini-score-grid {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  max-width: 420px;
+  max-width: 520px;
 }
 
-.mini-score-grid span {
+.mini-score-grid > span {
   display: inline-flex;
   align-items: center;
   min-height: 24px;
@@ -370,9 +409,18 @@ select:focus {
   white-space: nowrap;
 }
 
+.score-short-name {
+  display: none;
+}
+
 .result-table td:nth-child(2) {
-  min-width: 72px;
+  min-width: 64px;
   white-space: nowrap;
+}
+
+.result-table td:nth-child(4),
+.result-table td:nth-child(5) {
+  min-width: 86px;
 }
 
 .rule-panel {
@@ -537,6 +585,10 @@ select:focus {
     align-items: end;
   }
 
+  .row-head .school-field {
+    flex: 0 1 116px;
+  }
+
   .icon-button {
     width: 44px;
     height: 44px;
@@ -627,14 +679,22 @@ select:focus {
   }
 
   .result-table td:nth-child(3)::before {
-    content: "计算";
+    content: "流派";
   }
 
   .result-table td:nth-child(4)::before {
-    content: "项目明细";
+    content: "第一周积分";
   }
 
   .result-table td:nth-child(5)::before {
+    content: "第二周积分";
+  }
+
+  .result-table td:nth-child(6)::before {
+    content: "项目明细";
+  }
+
+  .result-table td:nth-child(7)::before {
     content: "总分";
   }
 
@@ -643,7 +703,15 @@ select:focus {
     height: 34px;
   }
 
-  .score-cell {
+  .week-score-cell {
+    font-size: 18px;
+  }
+
+  .score-cell span {
+    display: none;
+  }
+
+  .score-cell strong {
     font-size: 24px;
   }
 
@@ -652,12 +720,20 @@ select:focus {
     gap: 6px;
   }
 
-  .mini-score-grid span {
+  .mini-score-grid > span {
     flex: 1 1 calc(50% - 6px);
     justify-content: center;
     min-height: 30px;
     padding: 0 6px;
     text-align: center;
+  }
+
+  .score-full-name {
+    display: none;
+  }
+
+  .score-short-name {
+    display: inline;
   }
 
   .lookup-grid {
@@ -695,7 +771,7 @@ select:focus {
     min-width: 120px;
   }
 
-  .mini-score-grid span {
+  .mini-score-grid > span {
     flex-basis: 100%;
   }
 }
