@@ -102,6 +102,17 @@ h2 {
   border: 1px solid #d7d2c6;
 }
 
+.danger-button {
+  color: #7a332e;
+  background: #f8e8e4;
+  border-color: #efcbc4;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
 .mode-tabs {
   gap: 8px;
   padding: 6px;
@@ -172,6 +183,29 @@ label,
 .workspace-grid {
   grid-template-columns: minmax(500px, 0.9fr) minmax(640px, 1.1fr);
   align-items: start;
+}
+
+.archive-panel {
+  margin-bottom: 16px;
+}
+
+.archive-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto minmax(260px, 1.1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.archive-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.archive-meta {
+  margin: 12px 0 0;
+  color: #68756e;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .panel {
@@ -498,6 +532,15 @@ select:focus {
   .two-week-editor {
     grid-template-columns: 1fr;
   }
+
+  .archive-grid {
+    grid-template-columns: minmax(220px, 1fr) auto;
+  }
+
+  .archive-grid label:nth-of-type(2),
+  .archive-actions {
+    grid-column: 1 / -1;
+  }
 }
 
 @media (max-width: 640px) {
@@ -565,6 +608,28 @@ select:focus {
   .summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
+  }
+
+  .archive-panel {
+    margin-bottom: 12px;
+  }
+
+  .archive-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .archive-grid label:nth-of-type(2),
+  .archive-actions {
+    grid-column: auto;
+  }
+
+  .archive-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .archive-meta {
+    margin-top: 10px;
   }
 
   .metric,

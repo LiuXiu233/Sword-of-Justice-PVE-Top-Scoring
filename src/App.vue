@@ -10,8 +10,11 @@ const modes = [
 
 const schools = ['碎梦', '神相', '鸿音', '九灵', '龙吟', '沧澜', '铁衣', '素问', '玄机', '血河', '潮光']
 const storageKey = 'nishuihan-chief-score-tool'
+const archiveStorageKey = 'nishuihan-chief-score-tool-archives'
 const activeMode = ref('carry')
 const lookupRank = ref(1)
+const archiveName = ref('')
+const selectedArchiveId = ref('')
 
 function makeWeekRanks(defaultRank = 1) {
   return Object.fromEntries(categories.map((category) => [category.id, defaultRank]))
@@ -35,21 +38,24 @@ function makePlayer(index = 1) {
   }
 }
 
+function normalizePlayer(player, index = 0) {
+  const fallbackRank = player?.weekRank ?? 1
+  return {
+    ...makePlayer(index + 1),
+    ...player,
+    id: player?.id || crypto.randomUUID(),
+    school: schools.includes(player?.school) ? player.school : schools[0],
+    weekRanks: normalizeWeekRanks(player?.weekRanks, fallbackRank),
+    week1Ranks: normalizeWeekRanks(player?.week1Ranks, player?.week1Rank ?? fallbackRank),
+    week2Ranks: normalizeWeekRanks(player?.week2Ranks, player?.week2Rank ?? fallbackRank),
+  }
+}
+
 function loadPlayers() {
   try {
     const stored = JSON.parse(localStorage.getItem(storageKey))
     if (Array.isArray(stored) && stored.length) {
-      return stored.map((player, index) => {
-        const fallbackRank = player.weekRank ?? 1
-        return {
-          ...makePlayer(index + 1),
-          ...player,
-          school: schools.includes(player.school) ? player.school : schools[0],
-          weekRanks: normalizeWeekRanks(player.weekRanks, fallbackRank),
-          week1Ranks: normalizeWeekRanks(player.week1Ranks, player.week1Rank ?? fallbackRank),
-          week2Ranks: normalizeWeekRanks(player.week2Ranks, player.week2Rank ?? fallbackRank),
-        }
-      })
+      return stored.map(normalizePlayer)
     }
   } catch {
     localStorage.removeItem(storageKey)
@@ -58,9 +64,49 @@ function loadPlayers() {
   return [makePlayer(1), makePlayer(2), makePlayer(3)]
 }
 
+function clonePlayers(value = players) {
+  return JSON.parse(JSON.stringify(value))
+}
+
+function formatArchiveTime(value) {
+  return new Intl.DateTimeFormat('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value || Date.now()))
+}
+
+function normalizeArchive(archive, index = 0) {
+  const modeIds = modes.map((mode) => mode.id)
+  return {
+    id: archive?.id || crypto.randomUUID(),
+    name: String(archive?.name || `存档 ${index + 1}`),
+    savedAt: Number(archive?.savedAt) || Date.now(),
+    activeMode: modeIds.includes(archive?.activeMode) ? archive.activeMode : 'carry',
+    lookupRank: normalizeRank(archive?.lookupRank ?? 1),
+    players: Array.isArray(archive?.players) && archive.players.length ? archive.players.map(normalizePlayer) : [makePlayer(1)],
+  }
+}
+
+function loadArchives() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(archiveStorageKey))
+    if (Array.isArray(stored)) {
+      return stored.map(normalizeArchive).sort((a, b) => b.savedAt - a.savedAt)
+    }
+  } catch {
+    localStorage.removeItem(archiveStorageKey)
+  }
+
+  return []
+}
+
 const players = reactive(loadPlayers())
+const archives = ref(loadArchives())
 
 const activeModeMeta = computed(() => modes.find((mode) => mode.id === activeMode.value))
+const selectedArchive = computed(() => archives.value.find((archive) => archive.id === selectedArchiveId.value))
 
 function weekTotal(ranks) {
   return categories.reduce((total, category) => total + pointsFor(category.id, ranks?.[category.id]), 0)
@@ -171,6 +217,48 @@ function resetPlayers() {
   players.splice(0, players.length, makePlayer(1), makePlayer(2), makePlayer(3))
 }
 
+function persistArchives() {
+  localStorage.setItem(archiveStorageKey, JSON.stringify(archives.value))
+}
+
+function saveArchive() {
+  const name = archiveName.value.trim() || `存档 ${archives.value.length + 1}`
+  const archive = {
+    id: crypto.randomUUID(),
+    name,
+    savedAt: Date.now(),
+    activeMode: activeMode.value,
+    lookupRank: lookupRank.value,
+    players: clonePlayers(),
+  }
+
+  archives.value.unshift(archive)
+  selectedArchiveId.value = archive.id
+  archiveName.value = ''
+  persistArchives()
+}
+
+function loadArchive() {
+  if (!selectedArchive.value) {
+    return
+  }
+
+  activeMode.value = selectedArchive.value.activeMode
+  lookupRank.value = selectedArchive.value.lookupRank
+  players.splice(0, players.length, ...selectedArchive.value.players.map(normalizePlayer))
+}
+
+function deleteArchive() {
+  if (!selectedArchive.value) {
+    return
+  }
+
+  const deletingId = selectedArchive.value.id
+  archives.value = archives.value.filter((archive) => archive.id !== deletingId)
+  selectedArchiveId.value = archives.value[0]?.id || ''
+  persistArchives()
+}
+
 watch(
   players,
   (value) => {
@@ -223,6 +311,43 @@ watch(
         <span>{{ activeModeMeta.resultLabel }}均值</span>
         <strong>{{ formatNumber(averageScore) }}</strong>
       </div>
+    </section>
+
+    <section class="panel archive-panel">
+      <div class="section-heading">
+        <h2>存档管理</h2>
+        <span>{{ archives.length }} 个存档</span>
+      </div>
+
+      <div class="archive-grid">
+        <label>
+          存档名称
+          <input v-model.trim="archiveName" type="text" placeholder="例如：周一首席名单" />
+        </label>
+
+        <button class="primary-button" type="button" @click="saveArchive">保存当前</button>
+
+        <label>
+          读取存档
+          <select v-model="selectedArchiveId">
+            <option value="" disabled>请选择存档</option>
+            <option v-for="archive in archives" :key="archive.id" :value="archive.id">
+              {{ archive.name }} · {{ formatArchiveTime(archive.savedAt) }}
+            </option>
+          </select>
+        </label>
+
+        <div class="archive-actions">
+          <button class="secondary-button" type="button" :disabled="!selectedArchive" @click="loadArchive">读取</button>
+          <button class="secondary-button danger-button" type="button" :disabled="!selectedArchive" @click="deleteArchive">
+            删除
+          </button>
+        </div>
+      </div>
+
+      <p v-if="selectedArchive" class="archive-meta">
+        当前选择：{{ selectedArchive.name }}，保存于 {{ formatArchiveTime(selectedArchive.savedAt) }}
+      </p>
     </section>
 
     <section class="workspace-grid">
