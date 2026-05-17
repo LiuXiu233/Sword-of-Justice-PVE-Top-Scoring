@@ -21,11 +21,15 @@ def main():
         first_row.locator('input[type="number"]').nth(0).fill("1000")
         expect(page.locator(".score-cell").filter(has_text="23,000").first).to_be_visible()
 
+        page.locator(".project-toggle").filter(has_text="燃心画境·团本").click()
+        expect(page.locator(".score-cell").filter(has_text="20,500").first).to_be_visible()
+        expect(page.locator(".mini-score-grid").first.filter(has_text="未计")).to_be_visible()
+
         page.get_by_role("button", name="周成绩换积分").click()
-        expect(page.locator(".score-cell").filter(has_text="22,000").first).to_be_visible()
+        expect(page.locator(".score-cell").filter(has_text="19,500").first).to_be_visible()
 
         page.get_by_role("button", name="两周周成绩").click()
-        expect(page.locator(".score-cell").filter(has_text="44,000").first).to_be_visible()
+        expect(page.locator(".score-cell").filter(has_text="39,000").first).to_be_visible()
 
         page.get_by_role("button", name="添加成员").click()
         expect(page.locator(".player-row")).to_have_count(4)

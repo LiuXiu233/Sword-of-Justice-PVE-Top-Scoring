@@ -140,6 +140,51 @@ button:disabled {
   box-shadow: 0 6px 16px rgba(67, 59, 42, 0.08);
 }
 
+.project-toggle-panel {
+  margin-bottom: 16px;
+}
+
+.project-toggle-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.project-toggle {
+  display: grid;
+  gap: 6px;
+  min-height: 58px;
+  padding: 10px 12px;
+  color: #68756e;
+  background: #faf9f5;
+  border: 1px solid #e3ded2;
+  border-radius: 8px;
+  text-align: left;
+}
+
+.project-toggle span {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-toggle strong {
+  color: #7a332e;
+  font-size: 16px;
+}
+
+.project-toggle.active {
+  color: #17201b;
+  background: #eef7f1;
+  border-color: #cfe5d5;
+}
+
+.project-toggle.active strong {
+  color: #145f43;
+}
+
 .summary-grid,
 .workspace-grid {
   display: grid;
@@ -337,6 +382,16 @@ select:focus {
   font-weight: 900;
 }
 
+.project-field.inactive {
+  background: #f1eee7;
+  border-color: #e0dacd;
+  opacity: 0.72;
+}
+
+.project-field.inactive em {
+  color: #7a332e;
+}
+
 .icon-button {
   width: 34px;
   height: 34px;
@@ -441,6 +496,11 @@ select:focus {
   font-size: 12px;
   font-weight: 800;
   white-space: nowrap;
+}
+
+.mini-score-grid > span.inactive {
+  color: #7a332e;
+  background: #f1eee7;
 }
 
 .score-short-name {
@@ -612,6 +672,20 @@ select:focus {
 
   .archive-panel {
     margin-bottom: 12px;
+  }
+
+  .project-toggle-panel {
+    margin-bottom: 12px;
+  }
+
+  .project-toggle-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .project-toggle {
+    min-height: 52px;
+    padding: 9px 10px;
   }
 
   .archive-grid {
@@ -917,6 +991,7 @@ select:focus {
 
 @media (max-width: 340px) {
   .summary-grid,
+  .project-toggle-grid,
   .project-grid,
   .lookup-result-grid {
     grid-template-columns: 1fr;

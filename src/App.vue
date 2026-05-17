@@ -11,6 +11,7 @@ const modes = [
 const schools = ['碎梦', '神相', '鸿音', '九灵', '龙吟', '沧澜', '铁衣', '素问', '玄机', '血河', '潮光']
 const storageKey = 'nishuihan-chief-score-tool'
 const archiveStorageKey = 'nishuihan-chief-score-tool-archives'
+const activeProjectsStorageKey = 'nishuihan-chief-score-tool-active-projects'
 const activeMode = ref('carry')
 const lookupRank = ref(1)
 const archiveName = ref('')
@@ -85,6 +86,7 @@ function normalizeArchive(archive, index = 0) {
     savedAt: Number(archive?.savedAt) || Date.now(),
     activeMode: modeIds.includes(archive?.activeMode) ? archive.activeMode : 'carry',
     lookupRank: normalizeRank(archive?.lookupRank ?? 1),
+    activeProjectIds: normalizeActiveProjectIds(archive?.activeProjectIds),
     players: Array.isArray(archive?.players) && archive.players.length ? archive.players.map(normalizePlayer) : [makePlayer(1)],
   }
 }
@@ -102,21 +104,61 @@ function loadArchives() {
   return []
 }
 
+function normalizeActiveProjectIds(value) {
+  const validIds = categories.map((category) => category.id)
+  const selectedIds = Array.isArray(value) ? value.filter((id) => validIds.includes(id)) : validIds
+  return selectedIds.length ? selectedIds : validIds
+}
+
+function loadActiveProjectIds() {
+  try {
+    return normalizeActiveProjectIds(JSON.parse(localStorage.getItem(activeProjectsStorageKey)))
+  } catch {
+    localStorage.removeItem(activeProjectsStorageKey)
+    return normalizeActiveProjectIds()
+  }
+}
+
 const players = reactive(loadPlayers())
 const archives = ref(loadArchives())
+const activeProjectIds = ref(loadActiveProjectIds())
 
 const activeModeMeta = computed(() => modes.find((mode) => mode.id === activeMode.value))
 const selectedArchive = computed(() => archives.value.find((archive) => archive.id === selectedArchiveId.value))
+const activeProjectCount = computed(() => activeProjectIds.value.length)
+
+function isProjectActive(categoryId) {
+  return activeProjectIds.value.includes(categoryId)
+}
+
+function toggleProject(categoryId) {
+  if (isProjectActive(categoryId)) {
+    if (activeProjectIds.value.length === 1) {
+      return
+    }
+
+    activeProjectIds.value = activeProjectIds.value.filter((id) => id !== categoryId)
+    return
+  }
+
+  activeProjectIds.value = [...activeProjectIds.value, categoryId]
+}
+
+function projectPoints(categoryId, rank) {
+  return isProjectActive(categoryId) ? pointsFor(categoryId, rank) : 0
+}
 
 function weekTotal(ranks) {
-  return categories.reduce((total, category) => total + pointsFor(category.id, ranks?.[category.id]), 0)
+  return categories.reduce((total, category) => total + projectPoints(category.id, ranks?.[category.id]), 0)
 }
 
 function projectScores(ranks) {
   return categories.map((category) => ({
     ...category,
     rank: normalizeRank(ranks?.[category.id]),
-    points: pointsFor(category.id, ranks?.[category.id]),
+    active: isProjectActive(category.id),
+    rawPoints: pointsFor(category.id, ranks?.[category.id]),
+    points: projectPoints(category.id, ranks?.[category.id]),
   }))
 }
 
@@ -124,7 +166,10 @@ function resultProjectScores(player) {
   if (activeMode.value === 'twoWeeks') {
     return categories.map((category) => ({
       ...category,
-      points: pointsFor(category.id, player.week1Ranks?.[category.id]) + pointsFor(category.id, player.week2Ranks?.[category.id]),
+      active: isProjectActive(category.id),
+      points: isProjectActive(category.id)
+        ? pointsFor(category.id, player.week1Ranks?.[category.id]) + pointsFor(category.id, player.week2Ranks?.[category.id])
+        : 0,
     }))
   }
 
@@ -229,6 +274,7 @@ function saveArchive() {
     savedAt: Date.now(),
     activeMode: activeMode.value,
     lookupRank: lookupRank.value,
+    activeProjectIds: activeProjectIds.value,
     players: clonePlayers(),
   }
 
@@ -245,6 +291,7 @@ function loadArchive() {
 
   activeMode.value = selectedArchive.value.activeMode
   lookupRank.value = selectedArchive.value.lookupRank
+  activeProjectIds.value = normalizeActiveProjectIds(selectedArchive.value.activeProjectIds)
   players.splice(0, players.length, ...selectedArchive.value.players.map(normalizePlayer))
 }
 
@@ -263,6 +310,14 @@ watch(
   players,
   (value) => {
     localStorage.setItem(storageKey, JSON.stringify(value))
+  },
+  { deep: true },
+)
+
+watch(
+  activeProjectIds,
+  (value) => {
+    localStorage.setItem(activeProjectsStorageKey, JSON.stringify(normalizeActiveProjectIds(value)))
   },
   { deep: true },
 )
@@ -294,6 +349,26 @@ watch(
       </button>
     </section>
 
+    <section class="panel project-toggle-panel">
+      <div class="section-heading">
+        <h2>计分项目</h2>
+        <span>{{ activeProjectCount }}/{{ categories.length }} 项参与计算</span>
+      </div>
+
+      <div class="project-toggle-grid">
+        <button
+          v-for="category in categories"
+          :key="category.id"
+          type="button"
+          :class="['project-toggle', { active: isProjectActive(category.id) }]"
+          @click="toggleProject(category.id)"
+        >
+          <span>{{ category.name }}</span>
+          <strong>{{ isProjectActive(category.id) ? '计分' : '未计' }}</strong>
+        </button>
+      </div>
+    </section>
+
     <section class="summary-grid">
       <div class="metric">
         <span>当前模式</span>
@@ -301,7 +376,7 @@ watch(
       </div>
       <div class="metric">
         <span>每周项目</span>
-        <strong>{{ categories.length }} 项合计</strong>
+        <strong>{{ activeProjectCount }} 项计分</strong>
       </div>
       <div class="metric">
         <span>最高成员</span>
@@ -386,10 +461,14 @@ watch(
                 </div>
 
                 <div class="project-grid">
-                  <label v-for="category in categories" :key="category.id" class="project-field">
+                  <label
+                    v-for="category in categories"
+                    :key="category.id"
+                    :class="['project-field', { inactive: !isProjectActive(category.id) }]"
+                  >
                     <span>{{ category.name }}</span>
                     <input v-model.number="player.weekRanks[category.id]" type="number" min="1" max="300" />
-                    <em>{{ formatNumber(pointsFor(category.id, player.weekRanks[category.id])) }}</em>
+                    <em>{{ isProjectActive(category.id) ? formatNumber(pointsFor(category.id, player.weekRanks[category.id])) : '未计' }}</em>
                   </label>
                 </div>
               </div>
@@ -403,10 +482,14 @@ watch(
                 </div>
 
                 <div class="project-grid">
-                  <label v-for="category in categories" :key="category.id" class="project-field">
+                  <label
+                    v-for="category in categories"
+                    :key="category.id"
+                    :class="['project-field', { inactive: !isProjectActive(category.id) }]"
+                  >
                     <span>{{ category.shortName }}</span>
                     <input v-model.number="player.week1Ranks[category.id]" type="number" min="1" max="300" />
-                    <em>{{ formatNumber(pointsFor(category.id, player.week1Ranks[category.id])) }}</em>
+                    <em>{{ isProjectActive(category.id) ? formatNumber(pointsFor(category.id, player.week1Ranks[category.id])) : '未计' }}</em>
                   </label>
                 </div>
               </div>
@@ -418,10 +501,14 @@ watch(
                 </div>
 
                 <div class="project-grid">
-                  <label v-for="category in categories" :key="category.id" class="project-field">
+                  <label
+                    v-for="category in categories"
+                    :key="category.id"
+                    :class="['project-field', { inactive: !isProjectActive(category.id) }]"
+                  >
                     <span>{{ category.shortName }}</span>
                     <input v-model.number="player.week2Ranks[category.id]" type="number" min="1" max="300" />
-                    <em>{{ formatNumber(pointsFor(category.id, player.week2Ranks[category.id])) }}</em>
+                    <em>{{ isProjectActive(category.id) ? formatNumber(pointsFor(category.id, player.week2Ranks[category.id])) : '未计' }}</em>
                   </label>
                 </div>
               </div>
@@ -462,10 +549,10 @@ watch(
                 <td class="week-score-cell">{{ formatNumber(player.week2) }}</td>
                 <td>
                   <div class="mini-score-grid">
-                    <span v-for="score in player.resultScores" :key="score.id">
+                    <span v-for="score in player.resultScores" :key="score.id" :class="{ inactive: !score.active }">
                       <span class="score-full-name">{{ score.name }}</span>
                       <span class="score-short-name">{{ score.shortName }}</span>
-                      {{ formatNumber(score.points) }}
+                      {{ score.active ? formatNumber(score.points) : '未计' }}
                     </span>
                   </div>
                 </td>
