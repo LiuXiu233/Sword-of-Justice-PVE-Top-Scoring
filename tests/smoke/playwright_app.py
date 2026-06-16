@@ -12,13 +12,28 @@ def main():
 
         page.goto(os.environ.get("APP_URL", "http://127.0.0.1:5174"))
         page.wait_for_load_state("networkidle")
+        page.evaluate("localStorage.clear()")
+        page.reload()
+        page.wait_for_load_state("networkidle")
 
         expect(page.get_by_role("heading", name="记分与多人对比")).to_be_visible()
         expect(page.get_by_role("button", name="单周 + 上周积分")).to_be_visible()
+        expect(page.locator(".project-setting-card")).to_have_count(5)
 
         first_row = page.locator(".player-row").first
         first_row.locator('input[type="text"]').fill("甲")
         first_row.locator('input[type="number"]').nth(0).fill("1000")
+        expect(page.locator(".score-cell").filter(has_text="23,000").first).to_be_visible()
+
+        page.get_by_role("button", name="添加项目").click()
+        expect(page.locator(".project-setting-card")).to_have_count(6)
+        expect(page.locator(".score-cell").filter(has_text="25,500").first).to_be_visible()
+
+        page.locator(".project-setting-card").last.locator("select").select_option("max6000")
+        expect(page.locator(".score-cell").filter(has_text="29,000").first).to_be_visible()
+
+        page.locator(".project-setting-card").last.get_by_role("button", name="删除").click()
+        expect(page.locator(".project-setting-card")).to_have_count(5)
         expect(page.locator(".score-cell").filter(has_text="23,000").first).to_be_visible()
 
         page.locator(".project-toggle").filter(has_text="燃心画境·团本").click()

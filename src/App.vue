@@ -1,6 +1,13 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue'
-import { categories, formatNumber, normalizeRank, pointsFor } from './scoring'
+import {
+  defaultProjects,
+  formatNumber,
+  normalizeRank,
+  normalizeScoringLogic,
+  pointsForProject,
+  scoringLogicOptions,
+} from './scoring'
 
 const modes = [
   { id: 'carry', name: '单周 + 上周积分', resultLabel: '两周总积分' },
@@ -12,18 +19,62 @@ const schools = ['碎梦', '神相', '鸿音', '九灵', '龙吟', '沧澜', '�
 const storageKey = 'nishuihan-chief-score-tool'
 const archiveStorageKey = 'nishuihan-chief-score-tool-archives'
 const activeProjectsStorageKey = 'nishuihan-chief-score-tool-active-projects'
+const projectsStorageKey = 'nishuihan-chief-score-tool-projects'
 const activeMode = ref('carry')
 const lookupRank = ref(1)
 const archiveName = ref('')
 const selectedArchiveId = ref('')
 
-function makeWeekRanks(defaultRank = 1) {
-  return Object.fromEntries(categories.map((category) => [category.id, defaultRank]))
+function cloneProjects(value = defaultProjects) {
+  return JSON.parse(JSON.stringify(value))
 }
 
-function normalizeWeekRanks(ranks, fallbackRank = 1) {
+function makeProject(overrides = {}) {
+  const id = overrides.id || `custom_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+  const name = String(overrides.name || '自定义项目').trim() || '自定义项目'
+  return {
+    id,
+    name,
+    shortName: String(overrides.shortName || name.slice(0, 4)).trim() || name.slice(0, 4),
+    logic: normalizeScoringLogic(overrides.logic || 'max2500'),
+  }
+}
+
+function normalizeProjects(value) {
+  const source = Array.isArray(value) && value.length ? value : defaultProjects
+  const seen = new Set()
+  const normalized = source
+    .map((project) => makeProject(project))
+    .filter((project) => {
+      if (seen.has(project.id)) {
+        return false
+      }
+
+      seen.add(project.id)
+      return true
+    })
+
+  return normalized.length ? normalized : cloneProjects()
+}
+
+function loadProjects() {
+  try {
+    return normalizeProjects(JSON.parse(localStorage.getItem(projectsStorageKey)))
+  } catch {
+    localStorage.removeItem(projectsStorageKey)
+    return cloneProjects()
+  }
+}
+
+const categories = ref(loadProjects())
+
+function makeWeekRanks(defaultRank = 1, projectList = categories.value) {
+  return Object.fromEntries(projectList.map((category) => [category.id, defaultRank]))
+}
+
+function normalizeWeekRanks(ranks, fallbackRank = 1, projectList = categories.value) {
   return Object.fromEntries(
-    categories.map((category) => [category.id, normalizeRank(ranks?.[category.id] ?? fallbackRank)]),
+    projectList.map((category) => [category.id, normalizeRank(ranks?.[category.id] ?? fallbackRank)]),
   )
 }
 
@@ -39,16 +90,16 @@ function makePlayer(index = 1) {
   }
 }
 
-function normalizePlayer(player, index = 0) {
+function normalizePlayer(player, index = 0, projectList = categories.value) {
   const fallbackRank = player?.weekRank ?? 1
   return {
     ...makePlayer(index + 1),
     ...player,
     id: player?.id || crypto.randomUUID(),
     school: schools.includes(player?.school) ? player.school : schools[0],
-    weekRanks: normalizeWeekRanks(player?.weekRanks, fallbackRank),
-    week1Ranks: normalizeWeekRanks(player?.week1Ranks, player?.week1Rank ?? fallbackRank),
-    week2Ranks: normalizeWeekRanks(player?.week2Ranks, player?.week2Rank ?? fallbackRank),
+    weekRanks: normalizeWeekRanks(player?.weekRanks, fallbackRank, projectList),
+    week1Ranks: normalizeWeekRanks(player?.week1Ranks, player?.week1Rank ?? fallbackRank, projectList),
+    week2Ranks: normalizeWeekRanks(player?.week2Ranks, player?.week2Rank ?? fallbackRank, projectList),
   }
 }
 
@@ -80,14 +131,19 @@ function formatArchiveTime(value) {
 
 function normalizeArchive(archive, index = 0) {
   const modeIds = modes.map((mode) => mode.id)
+  const archiveProjects = normalizeProjects(archive?.projects)
   return {
     id: archive?.id || crypto.randomUUID(),
     name: String(archive?.name || `存档 ${index + 1}`),
     savedAt: Number(archive?.savedAt) || Date.now(),
     activeMode: modeIds.includes(archive?.activeMode) ? archive.activeMode : 'carry',
     lookupRank: normalizeRank(archive?.lookupRank ?? 1),
-    activeProjectIds: normalizeActiveProjectIds(archive?.activeProjectIds),
-    players: Array.isArray(archive?.players) && archive.players.length ? archive.players.map(normalizePlayer) : [makePlayer(1)],
+    projects: archiveProjects,
+    activeProjectIds: normalizeActiveProjectIds(archive?.activeProjectIds, archiveProjects),
+    players:
+      Array.isArray(archive?.players) && archive.players.length
+        ? archive.players.map((player, playerIndex) => normalizePlayer(player, playerIndex, archiveProjects))
+        : [makePlayer(1)],
   }
 }
 
@@ -104,8 +160,8 @@ function loadArchives() {
   return []
 }
 
-function normalizeActiveProjectIds(value) {
-  const validIds = categories.map((category) => category.id)
+function normalizeActiveProjectIds(value, projectList = categories.value) {
+  const validIds = projectList.map((category) => category.id)
   const selectedIds = Array.isArray(value) ? value.filter((id) => validIds.includes(id)) : validIds
   return selectedIds.length ? selectedIds : validIds
 }
@@ -145,30 +201,31 @@ function toggleProject(categoryId) {
 }
 
 function projectPoints(categoryId, rank) {
-  return isProjectActive(categoryId) ? pointsFor(categoryId, rank) : 0
+  const project = categories.value.find((category) => category.id === categoryId)
+  return project && isProjectActive(categoryId) ? pointsForProject(project, rank) : 0
 }
 
 function weekTotal(ranks) {
-  return categories.reduce((total, category) => total + projectPoints(category.id, ranks?.[category.id]), 0)
+  return categories.value.reduce((total, category) => total + projectPoints(category.id, ranks?.[category.id]), 0)
 }
 
 function projectScores(ranks) {
-  return categories.map((category) => ({
+  return categories.value.map((category) => ({
     ...category,
     rank: normalizeRank(ranks?.[category.id]),
     active: isProjectActive(category.id),
-    rawPoints: pointsFor(category.id, ranks?.[category.id]),
+    rawPoints: pointsForProject(category, ranks?.[category.id]),
     points: projectPoints(category.id, ranks?.[category.id]),
   }))
 }
 
 function resultProjectScores(player) {
   if (activeMode.value === 'twoWeeks') {
-    return categories.map((category) => ({
+    return categories.value.map((category) => ({
       ...category,
       active: isProjectActive(category.id),
       points: isProjectActive(category.id)
-        ? pointsFor(category.id, player.week1Ranks?.[category.id]) + pointsFor(category.id, player.week2Ranks?.[category.id])
+        ? pointsForProject(category, player.week1Ranks?.[category.id]) + pointsForProject(category, player.week2Ranks?.[category.id])
         : 0,
     }))
   }
@@ -234,10 +291,10 @@ const averageScore = computed(() => {
 
 const lookupScores = computed(() => {
   const rank = normalizeRank(lookupRank.value)
-  return categories.map((category) => ({
+  return categories.value.map((category) => ({
     ...category,
     rank,
-    points: pointsFor(category.id, rank),
+    points: pointsForProject(category, rank),
   }))
 })
 const lookupTotal = computed(() => lookupScores.value.reduce((total, score) => total + score.points, 0))
@@ -262,6 +319,54 @@ function resetPlayers() {
   players.splice(0, players.length, makePlayer(1), makePlayer(2), makePlayer(3))
 }
 
+function syncPlayerRanksToProjects() {
+  const validIds = categories.value.map((category) => category.id)
+
+  players.forEach((player) => {
+    ;['weekRanks', 'week1Ranks', 'week2Ranks'].forEach((key) => {
+      validIds.forEach((id) => {
+        if (player[key][id] == null) {
+          player[key][id] = 1
+        }
+      })
+
+      Object.keys(player[key]).forEach((id) => {
+        if (!validIds.includes(id)) {
+          delete player[key][id]
+        }
+      })
+    })
+  })
+}
+
+function addProject() {
+  const project = makeProject({ name: `自定义项目${categories.value.length + 1}`, logic: 'max2500' })
+  categories.value = [...categories.value, project]
+  activeProjectIds.value = [...activeProjectIds.value, project.id]
+
+  players.forEach((player) => {
+    player.weekRanks[project.id] = 1
+    player.week1Ranks[project.id] = 1
+    player.week2Ranks[project.id] = 1
+  })
+}
+
+function removeProject(projectId) {
+  if (categories.value.length === 1) {
+    return
+  }
+
+  categories.value = categories.value.filter((category) => category.id !== projectId)
+  activeProjectIds.value = normalizeActiveProjectIds(activeProjectIds.value.filter((id) => id !== projectId))
+  syncPlayerRanksToProjects()
+}
+
+function resetProjectsToTemplate() {
+  categories.value = cloneProjects()
+  activeProjectIds.value = categories.value.map((category) => category.id)
+  players.splice(0, players.length, ...players.map((player, index) => normalizePlayer(player, index)))
+}
+
 function persistArchives() {
   localStorage.setItem(archiveStorageKey, JSON.stringify(archives.value))
 }
@@ -274,6 +379,7 @@ function saveArchive() {
     savedAt: Date.now(),
     activeMode: activeMode.value,
     lookupRank: lookupRank.value,
+    projects: cloneProjects(categories.value),
     activeProjectIds: activeProjectIds.value,
     players: clonePlayers(),
   }
@@ -291,6 +397,7 @@ function loadArchive() {
 
   activeMode.value = selectedArchive.value.activeMode
   lookupRank.value = selectedArchive.value.lookupRank
+  categories.value = normalizeProjects(selectedArchive.value.projects)
   activeProjectIds.value = normalizeActiveProjectIds(selectedArchive.value.activeProjectIds)
   players.splice(0, players.length, ...selectedArchive.value.players.map(normalizePlayer))
 }
@@ -318,6 +425,16 @@ watch(
   activeProjectIds,
   (value) => {
     localStorage.setItem(activeProjectsStorageKey, JSON.stringify(normalizeActiveProjectIds(value)))
+  },
+  { deep: true },
+)
+
+watch(
+  categories,
+  (value) => {
+    activeProjectIds.value = normalizeActiveProjectIds(activeProjectIds.value)
+    syncPlayerRanksToProjects()
+    localStorage.setItem(projectsStorageKey, JSON.stringify(value))
   },
   { deep: true },
 )
@@ -351,21 +468,54 @@ watch(
 
     <section class="panel project-toggle-panel">
       <div class="section-heading">
-        <h2>计分项目</h2>
+        <h2>项目设置</h2>
         <span>{{ activeProjectCount }}/{{ categories.length }} 项参与计算</span>
       </div>
 
-      <div class="project-toggle-grid">
-        <button
-          v-for="category in categories"
-          :key="category.id"
-          type="button"
-          :class="['project-toggle', { active: isProjectActive(category.id) }]"
-          @click="toggleProject(category.id)"
-        >
-          <span>{{ category.name }}</span>
-          <strong>{{ isProjectActive(category.id) ? '计分' : '未计' }}</strong>
-        </button>
+      <div class="project-setting-actions">
+        <button class="primary-button" type="button" @click="addProject">添加项目</button>
+        <button class="secondary-button" type="button" @click="resetProjectsToTemplate">恢复模板</button>
+      </div>
+
+      <div class="project-setting-grid">
+        <article v-for="category in categories" :key="category.id" class="project-setting-card">
+          <button
+            type="button"
+            :class="['project-toggle', { active: isProjectActive(category.id) }]"
+            @click="toggleProject(category.id)"
+          >
+            <span>{{ category.name }}</span>
+            <strong>{{ isProjectActive(category.id) ? '计分' : '未计' }}</strong>
+          </button>
+
+          <label>
+            项目名称
+            <input v-model.trim="category.name" type="text" />
+          </label>
+
+          <label>
+            简称
+            <input v-model.trim="category.shortName" type="text" />
+          </label>
+
+          <label>
+            积分逻辑
+            <select v-model="category.logic">
+              <option v-for="logic in scoringLogicOptions" :key="logic.id" :value="logic.id">
+                {{ logic.name }}
+              </option>
+            </select>
+          </label>
+
+          <button
+            class="secondary-button danger-button"
+            type="button"
+            :disabled="categories.length === 1"
+            @click="removeProject(category.id)"
+          >
+            删除
+          </button>
+        </article>
       </div>
     </section>
 
@@ -468,7 +618,7 @@ watch(
                   >
                     <span>{{ category.name }}</span>
                     <input v-model.number="player.weekRanks[category.id]" type="number" min="1" max="300" />
-                    <em>{{ isProjectActive(category.id) ? formatNumber(pointsFor(category.id, player.weekRanks[category.id])) : '未计' }}</em>
+                    <em>{{ isProjectActive(category.id) ? formatNumber(pointsForProject(category, player.weekRanks[category.id])) : '未计' }}</em>
                   </label>
                 </div>
               </div>
@@ -489,7 +639,7 @@ watch(
                   >
                     <span>{{ category.shortName }}</span>
                     <input v-model.number="player.week1Ranks[category.id]" type="number" min="1" max="300" />
-                    <em>{{ isProjectActive(category.id) ? formatNumber(pointsFor(category.id, player.week1Ranks[category.id])) : '未计' }}</em>
+                    <em>{{ isProjectActive(category.id) ? formatNumber(pointsForProject(category, player.week1Ranks[category.id])) : '未计' }}</em>
                   </label>
                 </div>
               </div>
@@ -508,7 +658,7 @@ watch(
                   >
                     <span>{{ category.shortName }}</span>
                     <input v-model.number="player.week2Ranks[category.id]" type="number" min="1" max="300" />
-                    <em>{{ isProjectActive(category.id) ? formatNumber(pointsFor(category.id, player.week2Ranks[category.id])) : '未计' }}</em>
+                    <em>{{ isProjectActive(category.id) ? formatNumber(pointsForProject(category, player.week2Ranks[category.id])) : '未计' }}</em>
                   </label>
                 </div>
               </div>
