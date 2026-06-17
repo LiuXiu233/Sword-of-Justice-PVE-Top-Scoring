@@ -15,7 +15,7 @@ export const defaultProjects = [
 const RANK_MIN = 1
 const RANK_MAX = 300
 
-function createRankTable(base, rounding = 'round') {
+function createSixRankTable(base, rounding = 'round') {
   const table = {}
   const headStep = base * 0.05
   const tailStart = base * 0.8
@@ -36,10 +36,56 @@ function createRankTable(base, rounding = 'round') {
   return table
 }
 
+function createRaidRankTable() {
+  const table = {}
+  const head = [6000, 5400, 4800]
+  const middle = [4628, 4457, 4285, 4114, 3942, 3770, 3600]
+  const tailBase = createRealmRaidReferenceTable()
+
+  for (let rank = RANK_MIN; rank <= RANK_MAX; rank += 1) {
+    if (rank <= 36) {
+      table[rank] = head[Math.floor((rank - 1) / 12)]
+      continue
+    }
+
+    if (rank <= 120) {
+      table[rank] = middle[Math.floor((rank - 37) / 12)]
+      continue
+    }
+
+    table[rank] = Math.floor(tailBase[rank] * 2.4)
+  }
+
+  return table
+}
+
+function createRealmRaidReferenceTable() {
+  const table = {}
+  const head = [2500, 2250, 2000]
+  const middle = [1928, 1857, 1785, 1714, 1642, 1570, 1500]
+
+  for (let rank = RANK_MIN; rank <= RANK_MAX; rank += 1) {
+    if (rank <= 36) {
+      table[rank] = head[Math.floor((rank - 1) / 12)]
+      continue
+    }
+
+    if (rank <= 120) {
+      table[rank] = middle[Math.floor((rank - 37) / 12)]
+      continue
+    }
+
+    const block = Math.floor((rank - 121) / 12) + 1
+    table[rank] = Math.round(1500 - block * (500 / 15))
+  }
+
+  return table
+}
+
 export const scoreTables = {
-  max6000: createRankTable(6000, 'floor'),
-  max5000: createRankTable(5000, 'floor'),
-  max2500: createRankTable(2500, 'round'),
+  max6000: createRaidRankTable(),
+  max5000: createSixRankTable(5000, 'floor'),
+  max2500: createSixRankTable(2500, 'round'),
 }
 
 export function normalizeRank(value) {

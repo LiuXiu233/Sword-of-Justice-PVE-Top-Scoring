@@ -50,6 +50,9 @@ def main():
         expect(page.locator(".player-row")).to_have_count(4)
         expect(page.locator(".lookup-result-grid .lookup-card")).to_have_count(5)
         expect(page.locator(".lookup-score").filter(has_text="22,000")).to_be_visible()
+        page.locator(".rule-panel input").fill("13")
+        expect(page.locator(".lookup-score").filter(has_text="19,800")).to_be_visible()
+        expect(page.locator(".lookup-card").filter(has_text="5,400").first).to_be_visible()
 
         page.screenshot(path="/tmp/nishuihan-score-tool.png", full_page=True)
         assert not console_errors, console_errors
