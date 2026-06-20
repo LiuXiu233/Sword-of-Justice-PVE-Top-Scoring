@@ -19,6 +19,7 @@ def main():
         expect(page.get_by_role("heading", name="记分与多人对比")).to_be_visible()
         expect(page.get_by_role("button", name="单周 + 上周积分")).to_be_visible()
         expect(page.locator(".project-setting-card")).to_have_count(5)
+        expect(page.locator(".project-setting-card").last.locator("select")).to_have_value("max2500Raid")
 
         first_row = page.locator(".player-row").first
         first_row.locator('input[type="text"]').fill("甲")
@@ -53,6 +54,9 @@ def main():
         page.locator(".rule-panel input").fill("13")
         expect(page.locator(".lookup-score").filter(has_text="19,800")).to_be_visible()
         expect(page.locator(".lookup-card").filter(has_text="5,400").first).to_be_visible()
+        page.locator(".rule-panel input").fill("37")
+        expect(page.locator(".lookup-score").filter(has_text="16,983")).to_be_visible()
+        expect(page.locator(".lookup-card").filter(has_text="1,928")).to_be_visible()
 
         page.screenshot(path="/tmp/nishuihan-score-tool.png", full_page=True)
         assert not console_errors, console_errors

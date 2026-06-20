@@ -2,6 +2,7 @@ export const scoringLogicOptions = [
   { id: 'max6000', name: '满分 6000', shortName: '6000' },
   { id: 'max5000', name: '满分 5000', shortName: '5000' },
   { id: 'max2500', name: '满分 2500', shortName: '2500' },
+  { id: 'max2500Raid', name: '满分 2500（12 人分档·燃团）', shortName: '燃团2500' },
 ]
 
 export const defaultProjects = [
@@ -9,7 +10,7 @@ export const defaultProjects = [
   { id: 'six', name: '六人本', shortName: '六人本', logic: 'max5000' },
   { id: 'raid123', name: '团本·外', shortName: '团本外', logic: 'max6000' },
   { id: 'raid456', name: '团本·内', shortName: '团本内', logic: 'max6000' },
-  { id: 'realmRaid', name: '燃心画境·团本', shortName: '画境团本', logic: 'max2500' },
+  { id: 'realmRaid', name: '燃心画境·团本', shortName: '画境团本', logic: 'max2500Raid' },
 ]
 
 const RANK_MIN = 1
@@ -86,6 +87,7 @@ export const scoreTables = {
   max6000: createRaidRankTable(),
   max5000: createSixRankTable(5000, 'floor'),
   max2500: createSixRankTable(2500, 'round'),
+  max2500Raid: createRealmRaidReferenceTable(),
 }
 
 export function normalizeRank(value) {
