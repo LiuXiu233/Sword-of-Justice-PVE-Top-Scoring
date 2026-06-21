@@ -15,6 +15,7 @@ export const defaultProjects = [
 
 const RANK_MIN = 1
 const RANK_MAX = 300
+const RANK_NONE = 0
 
 function createSixRankTable(base, rounding = 'round') {
   const table = {}
@@ -97,7 +98,7 @@ export function normalizeRank(value) {
     return RANK_MIN
   }
 
-  return Math.min(RANK_MAX, Math.max(RANK_MIN, Math.round(number)))
+  return Math.min(RANK_MAX, Math.max(RANK_NONE, Math.round(number)))
 }
 
 export function normalizeScoringLogic(value) {
@@ -105,8 +106,14 @@ export function normalizeScoringLogic(value) {
 }
 
 export function pointsForLogic(logicId, rank) {
+  const normalizedRank = normalizeRank(rank)
+
+  if (normalizedRank === RANK_NONE) {
+    return 0
+  }
+
   const table = scoreTables[normalizeScoringLogic(logicId)]
-  return table[normalizeRank(rank)]
+  return table[normalizedRank]
 }
 
 export function pointsForProject(project, rank) {

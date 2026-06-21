@@ -43,6 +43,9 @@ def main():
 
         page.get_by_role("button", name="周成绩换积分").click()
         expect(page.locator(".score-cell").filter(has_text="19,500").first).to_be_visible()
+        first_row.locator('input[type="number"]').first.fill("0")
+        expect(first_row.get_by_text("无排名")).to_be_visible()
+        expect(page.locator(".score-cell").filter(has_text="17,000").first).to_be_visible()
 
         page.get_by_role("button", name="两周周成绩").click()
         expect(page.locator(".score-cell").filter(has_text="39,000").first).to_be_visible()
@@ -57,6 +60,9 @@ def main():
         page.locator(".rule-panel input").fill("37")
         expect(page.locator(".lookup-score").filter(has_text="16,983")).to_be_visible()
         expect(page.locator(".lookup-card").filter(has_text="1,928")).to_be_visible()
+        page.locator(".rule-panel input").fill("0")
+        expect(page.locator(".lookup-score").filter(has_text="0")).to_be_visible()
+        expect(page.locator(".lookup-card").filter(has_text="无排名")).to_have_count(5)
 
         page.screenshot(path="/tmp/nishuihan-score-tool.png", full_page=True)
         assert not console_errors, console_errors

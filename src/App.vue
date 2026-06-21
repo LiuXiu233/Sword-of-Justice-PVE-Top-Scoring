@@ -617,8 +617,8 @@ watch(
                     :class="['project-field', { inactive: !isProjectActive(category.id) }]"
                   >
                     <span>{{ category.name }}</span>
-                    <input v-model.number="player.weekRanks[category.id]" type="number" min="1" max="300" />
-                    <em>{{ isProjectActive(category.id) ? formatNumber(pointsForProject(category, player.weekRanks[category.id])) : '未计' }}</em>
+                    <input v-model.number="player.weekRanks[category.id]" type="number" min="0" max="300" />
+                    <em>{{ !isProjectActive(category.id) ? '未计' : normalizeRank(player.weekRanks[category.id]) === 0 ? '无排名' : formatNumber(pointsForProject(category, player.weekRanks[category.id])) }}</em>
                   </label>
                 </div>
               </div>
@@ -638,8 +638,8 @@ watch(
                     :class="['project-field', { inactive: !isProjectActive(category.id) }]"
                   >
                     <span>{{ category.shortName }}</span>
-                    <input v-model.number="player.week1Ranks[category.id]" type="number" min="1" max="300" />
-                    <em>{{ isProjectActive(category.id) ? formatNumber(pointsForProject(category, player.week1Ranks[category.id])) : '未计' }}</em>
+                    <input v-model.number="player.week1Ranks[category.id]" type="number" min="0" max="300" />
+                    <em>{{ !isProjectActive(category.id) ? '未计' : normalizeRank(player.week1Ranks[category.id]) === 0 ? '无排名' : formatNumber(pointsForProject(category, player.week1Ranks[category.id])) }}</em>
                   </label>
                 </div>
               </div>
@@ -657,8 +657,8 @@ watch(
                     :class="['project-field', { inactive: !isProjectActive(category.id) }]"
                   >
                     <span>{{ category.shortName }}</span>
-                    <input v-model.number="player.week2Ranks[category.id]" type="number" min="1" max="300" />
-                    <em>{{ isProjectActive(category.id) ? formatNumber(pointsForProject(category, player.week2Ranks[category.id])) : '未计' }}</em>
+                    <input v-model.number="player.week2Ranks[category.id]" type="number" min="0" max="300" />
+                    <em>{{ !isProjectActive(category.id) ? '未计' : normalizeRank(player.week2Ranks[category.id]) === 0 ? '无排名' : formatNumber(pointsForProject(category, player.week2Ranks[category.id])) }}</em>
                   </label>
                 </div>
               </div>
@@ -742,7 +742,7 @@ watch(
       <div class="lookup-grid">
         <label>
           排名
-          <input v-model.number="lookupRank" type="number" min="1" max="300" />
+          <input v-model.number="lookupRank" type="number" min="0" max="300" />
         </label>
 
         <div class="lookup-score">
@@ -755,7 +755,7 @@ watch(
         <div v-for="score in lookupScores" :key="score.id" class="lookup-card">
           <span>{{ score.name }}</span>
           <strong>{{ formatNumber(score.points) }}</strong>
-          <em>第 {{ score.rank }} 名</em>
+          <em>{{ score.rank === 0 ? '无排名' : `第 ${score.rank} 名` }}</em>
         </div>
       </div>
     </section>
